@@ -41,34 +41,38 @@ We encourage you to be creative! Feel free to use any libraries, tools, services
 
 
 ## Getting Started
-1. Clone the repository:
-    ```shell
-    git clone <repository_url>
-    cd heron_classifier
-    ```
-
-2. Install dependencies:
+1. Install dependencies:
     ```shell
     python -m venv venv
     source venv/bin/activate
-    pip install -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
     ```
 
-3. Run the Flask app:
+2. Run the Flask app:
     ```shell
     python -m src.app
     ```
 
-4. Test the classifier using a tool like curl:
+3. Run celery:
+    ```shell
+    celery -A src.tasks worker --loglevel=info
+    ```
+
+4. Test the classifier by sending POST request using a tool like curl:
     ```shell
     curl -X POST -F 'file=@path_to_pdf.pdf' http://127.0.0.1:5000/classify_file
     ```
 
-5. Run tests:
+5. Get classifier results using `task_id` returned from previous CURL command and send GET request:
+    ```shell
+    curl -X GET  http://127.0.0.1:5000/get_classification_result/{}
+    ```
+
+6. Run tests:
    ```shell
     pytest
     ```
-
+    
 ## Submission
 
 Please aim to spend 3 hours on this challenge.
