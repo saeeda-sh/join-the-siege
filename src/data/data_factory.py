@@ -1,14 +1,16 @@
 import re
 import random
-from typing import Callable, Dict
+from .generators import (
+    generate_invoice_text,
+    generate_bank_statement_text,
+    generate_license_text,
+)
 
 
 class SyntheticDataFactory:
     """
     Base factory class to generate synthetic text data for document classification task
     """
-
-    INDUSTRY_GENERATORS: Dict[str, Dict[str, Callable]] = {}
 
     def __init__(
         self, num_samples: int = 1000, add_noise: bool = True, industry: str = None
@@ -22,12 +24,36 @@ class SyntheticDataFactory:
         self.num_samples = num_samples
         self.add_noise = add_noise
         self.industry = industry
-        self.generators = {}
+        self.generators = {
+            "invoice": generate_invoice_text,
+            "bank_statement": generate_bank_statement_text,
+            "driver_license": generate_license_text,
+        }
 
-        if self.industry:
-            if self.industry not in self.INDUSTRY_GENERATORS:
-                raise ValueError(f"Industry '{self.industry}' not supported.")
-            self.generators = self.INDUSTRY_GENERATORS[self.industry]
+    def generate(self) -> tuple[list[str], list[str]]:
+        """
+        Generate synthetic document text and associated labels.
+
+        Returns:
+            Tuple[List[str], List[str]]: A tuple containing:
+                - List of generated document texts
+                - List of document type labels
+        """
+        if not self.generators:
+            raise ValueError("No document generators defined.")
+
+        texts, labels = [], []
+        for _ in range(self.num_samples):
+            doc_type = random.choice(list(self.generators.keys()))
+            text = self.generators[doc_type]()
+
+            if self.add_noise and (self.num_samples // 2 == 0):
+                text = self.add_random_formatting(text)
+
+            texts.append(text)
+            labels.append(doc_type)
+
+        return texts, labels
 
     def add_random_formatting(self, text: str) -> str:
         """
@@ -62,35 +88,3 @@ class SyntheticDataFactory:
             text = text[:insert_index] + noise + text[insert_index:]
 
         return text
-
-    def generate(self) -> tuple[list[str], list[str]]:
-        """
-        Generate synthetic document text and associated labels.
-
-        Returns:
-            Tuple[List[str], List[str]]: A tuple containing:
-                - List of generated document texts
-                - List of document type labels
-        """
-        if not self.generators:
-            raise ValueError("No document generators defined.")
-
-        texts, labels = [], []
-        for _ in range(self.num_samples):
-            doc_type = random.choice(list(self.generators.keys()))
-            text = self.generators[doc_type]()
-
-            if self.add_noise:
-                text = self.add_random_formatting(text)
-
-            texts.append(text)
-            labels.append(doc_type)
-
-        return texts, labels
-
-    @classmethod
-    def register_industry(cls, industry: str, generators: Dict[str, Callable]):
-        """
-        Registers a set of generators for a specific industry.
-        """
-        cls.INDUSTRY_GENERATORS[industry] = generators

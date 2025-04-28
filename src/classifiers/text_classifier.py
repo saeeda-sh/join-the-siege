@@ -30,16 +30,21 @@ class TextClassifier(BaseClassifier):
         Args:
             model_name (str): The name of the pre-trained model.
             num_labels (int): The number of classification labels.
-            load_from_path (str): Optional, path to load a trained model from.
+            load_from_path (str): Path to load a trained model from.
+            industry (str): Industry the classified documents belong to.
         """
         super().__init__(
             model_name=model_name,
             load_from_path=load_from_path,
-            model=AutoModelForSequenceClassification,
-            processor=AutoTokenizer,
         )
         self.num_labels = num_labels
         self.industry = indstry
+
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        self.processor = AutoTokenizer.from_pretrained(model_name)
+
+        if load_from_path:
+            self.load(path_or_name=load_from_path)
 
     def preprocessing(
         self, texts: List[str], labels: List[str], tokenizer: PreTrainedTokenizerBase
@@ -60,6 +65,7 @@ class TextClassifier(BaseClassifier):
         inputs = self.processor(
             text, return_tensors="pt", truncation=True, padding=True
         )
+
         with torch.no_grad():
             logits = self.model(**inputs).logits
         predicted_class_id = torch.argmax(logits, dim=1).item()
@@ -73,7 +79,7 @@ class TextClassifier(BaseClassifier):
         self, num_samples=1000, epochs=3, batch_size=8, cache_dir="cached_dataset"
     ):
         # Load or generate dataset
-        dataset, label_encoder = self.load_or_generate_data(num_samples, cache_dir)
+        dataset, label_encoder = self.load_synthetic_data(num_samples, cache_dir)
         self.label_encoder = label_encoder
 
         # Split into train and test datasets
@@ -89,32 +95,23 @@ class TextClassifier(BaseClassifier):
             args=training_args,
             train_dataset=train_dataset,
             eval_dataset=test_dataset,
-            processing_class=self.tokenizer,
+            processing_class=self.processor,
         )
         trainer.train()
 
         # Save the trained model and tokenizer
         self.save()
 
-    def load_or_generate_data(
+    def load_synthetic_data(
         self,
         num_samples: int,
-        cache_dir: str,
     ) -> Tuple[Dataset, LabelEncoder]:
         """
-        Load existing label encoder or generates new synthetic data and encodes it.
+        Generates new synthetic data and encodes it.
         """
-        if os.path.exists(cache_dir):
-            print(f"Loading cached dataset from {cache_dir}")
-            dataset = load_from_disk(cache_dir)
-            label_encoder = joblib.load(os.path.join(cache_dir, "label_encoder.joblib"))
-        else:
-            print("Generating new synthetic dataset")
-            factory = SyntheticDataFactory(
-                num_samples=num_samples, industry=self.industry
-            )
-            texts, labels = factory.generate()
-            dataset, label_encoder = self.preprocessing(texts, labels, self.tokenizer)
+        factory = SyntheticDataFactory(num_samples=num_samples, industry=self.industry)
+        texts, labels = factory.generate()
+        dataset, label_encoder = self.preprocessing(texts, labels, self.processor)
         return dataset, label_encoder
 
     def configure_training_args(

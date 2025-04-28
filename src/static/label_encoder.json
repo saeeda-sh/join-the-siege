@@ -1,0 +1,5 @@
+{
+    "bank_statement": 0,
+    "invoice": 1,
+    "driver_license": 2
+}
