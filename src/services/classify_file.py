@@ -1,6 +1,7 @@
 from src.classifiers.text_classifier import TextClassifier
 from src.utils.parsers import extract_text_from_file
 
+
 text_classifier = TextClassifier(load_from_path="model/")
 
 

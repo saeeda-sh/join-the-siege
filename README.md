@@ -48,24 +48,34 @@ We encourage you to be creative! Feel free to use any libraries, tools, services
     pip install --no-cache-dir -r requirements.txt
     ```
 
-2. Run the Flask app:
+2. Train the model
+    ```shell
+    python -m src.train_model --num_samples 1000 --epochs 3 --batch_size 8
+    ```
+
+3. Run the Flask app:
     ```shell
     python -m src.app
     ```
 
-3. Run celery:
+4. Run celery:
     ```shell
     celery -A src.tasks worker --loglevel=info
     ```
 
-4. Test the classifier by sending POST request using a tool like curl:
+5. Test the classifier by sending POST request using a tool like curl:
     ```shell
     curl -X POST -F 'file=@path_to_pdf.pdf' http://127.0.0.1:5000/classify_file
     ```
 
-5. Get classifier results using `task_id` returned from previous CURL command and send GET request:
+    eg:
     ```shell
-    curl -X GET  http://127.0.0.1:5000/get_classification_result/{}
+    curl -X POST -F 'file=@bank_statement_1.pdf' http://127.0.0.1:5000/classify_file
+    ```
+
+6. Get classifier results using `task_id` returned from previous CURL command and send GET request:
+    ```shell
+    curl -X GET  http://127.0.0.1:5000/get_classification_result/{task_id}
     ```
 
 6. Run tests:

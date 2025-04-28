@@ -4,7 +4,7 @@ from io import BytesIO
 import numpy as np
 import pandas as pd
 from pdf2image import convert_from_path
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 import pytesseract
 
 from src.utils.ocr_utils import ocr_image_processing
@@ -58,3 +58,5 @@ def extract_text_from_file(file_bytes: bytes, ext: str) -> str:
             else pd.read_csv(BytesIO(file_bytes))
         )
         return df.astype(str).to_string()
+    else:
+        raise ValueError(f"Unsupported file type. Extension: {ext}")

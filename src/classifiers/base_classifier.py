@@ -4,13 +4,21 @@ from abc import ABC, abstractmethod
 
 
 class BaseClassifier(ABC):
-    def __init__(self, model_name, load_from_path=None, model=None, processor=None):
+    def __init__(
+        self,
+        model_name: str,
+        num_labels: int,
+        load_from_path: str = None,
+        model=None,
+        processor=None,
+    ):
         self.model_name = model_name
+        self.num_labels = num_labels
         self.model = model
         self.processor = processor
         self.label_encoder = None
 
-        self.load(load_from_path or model_name)
+        self.load(load_from_path)
 
     @abstractmethod
     def preprocessing(self, inputs, labels):
@@ -36,8 +44,10 @@ class BaseClassifier(ABC):
             path_or_name (str): Path to the local model or the model name from Hugging Face.
         """
         try:
-            if os.path.exists(path_or_name):
-                self.model = self.model.from_pretrained(path_or_name)
+            if path_or_name and os.path.exists(path_or_name):
+                self.model = self.model.from_pretrained(
+                    path_or_name, num_labels=self.num_labels
+                )
                 self.processor = self.processor.from_pretrained(path_or_name)
 
                 label_encoder_path = os.path.join(path_or_name, "label_encoder.joblib")
@@ -46,9 +56,10 @@ class BaseClassifier(ABC):
                         f"Label encoder file not found at: {label_encoder_path}"
                     )
                 self.label_encoder = joblib.load(label_encoder_path)
-
             else:
-                self.model = self.model.from_pretrained(path_or_name)
-                self.processor = self.processor.from_pretrained(path_or_name)
+                self.model = self.model.from_pretrained(
+                    self.model_name, num_labels=self.num_labels
+                )
+                self.processor = self.processor.from_pretrained(self.model_name)
         except Exception as e:
             print(f"Error: Unable to load model. {e}")

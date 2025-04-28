@@ -1,7 +1,7 @@
 import os
 import joblib
 import torch
-from datasets import Dataset, load_from_disk
+from datasets import Dataset
 from sklearn.preprocessing import LabelEncoder
 from typing import List, Tuple
 from transformers import (
@@ -22,7 +22,6 @@ class TextClassifier(BaseClassifier):
         model_name="distilbert-base-uncased",
         num_labels: int = 3,
         load_from_path: str = None,
-        indstry: str = None,
     ):
         """
         Initializes the TextClassifier by inheriting from BaseClassifier.
@@ -31,17 +30,14 @@ class TextClassifier(BaseClassifier):
             model_name (str): The name of the pre-trained model.
             num_labels (int): The number of classification labels.
             load_from_path (str): Path to load a trained model from.
-            industry (str): Industry the classified documents belong to.
         """
         super().__init__(
             model_name=model_name,
             load_from_path=load_from_path,
+            model=AutoModelForSequenceClassification,
+            processor=AutoTokenizer,
+            num_labels=num_labels,
         )
-        self.num_labels = num_labels
-        self.industry = indstry
-
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        self.processor = AutoTokenizer.from_pretrained(model_name)
 
         if load_from_path:
             self.load(path_or_name=load_from_path)
@@ -75,11 +71,9 @@ class TextClassifier(BaseClassifier):
 
         return self.label_encoder.inverse_transform([predicted_class_id])[0]
 
-    def train(
-        self, num_samples=1000, epochs=3, batch_size=8, cache_dir="cached_dataset"
-    ):
+    def train(self, num_samples=1000, epochs=3, batch_size=8):
         # Load or generate dataset
-        dataset, label_encoder = self.load_synthetic_data(num_samples, cache_dir)
+        dataset, label_encoder = self.load_synthetic_data(num_samples)
         self.label_encoder = label_encoder
 
         # Split into train and test datasets
@@ -100,7 +94,7 @@ class TextClassifier(BaseClassifier):
         trainer.train()
 
         # Save the trained model and tokenizer
-        self.save()
+        self.save("model/")
 
     def load_synthetic_data(
         self,
@@ -109,7 +103,7 @@ class TextClassifier(BaseClassifier):
         """
         Generates new synthetic data and encodes it.
         """
-        factory = SyntheticDataFactory(num_samples=num_samples, industry=self.industry)
+        factory = SyntheticDataFactory(num_samples=num_samples)
         texts, labels = factory.generate()
         dataset, label_encoder = self.preprocessing(texts, labels, self.processor)
         return dataset, label_encoder
